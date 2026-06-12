@@ -4,6 +4,7 @@ import type { BomRow, Machine } from "@/src/lib/contracts";
 import { normalizeBomRow } from "@/src/lib/contracts";
 import type { LookupResult, PriceLookup } from "./types";
 import { normalizeBrand, normalizeModel, normalizePriceText } from "./normalize";
+import { gotScraping } from "got-scraping";
 
 const BRAND_TO_ABV: Record<string, string> = {
   ge: "hot",
@@ -49,15 +50,20 @@ function modelUrl(abv: string, model: string, page?: number): string {
 }
 
 async function fetchHtml(url: string): Promise<string | null> {
-  const response = await fetch(url, {
-    headers: { "user-agent": "RoadrunnerPartsLedger/0.1 single-machine BOM lookup" },
-    next: { revalidate: 3600 }
-  });
-
-  if (!response.ok) return null;
-  const html = await response.text();
-  if (/Model is not valid for this site/i.test(html)) return null;
-  return html;
+  try {
+    const response = await gotScraping({
+      url,
+      headerGeneratorOptions: {
+        browsers: [{ name: "chrome", minVersion: 110 }]
+      }
+    });
+    const html = response.body;
+    if (/Model is not valid for this site/i.test(html)) return null;
+    return html;
+  } catch (error) {
+    console.error(`[encompass] Failed to fetch ${url}:`, error);
+    return null;
+  }
 }
 
 function parseRows(html: string): BomRow[] {
