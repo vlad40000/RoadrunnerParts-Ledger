@@ -69,7 +69,7 @@ export async function POST(request: Request) {
         },
       ],
       config: {
-        thinkingConfig: { thinkingBudget: 0 }, // MINIMAL — suppress chain-of-thought for speed
+        thinkingConfig: { thinkingBudget: 2048 },
         tools: [{ googleSearch: {} }],
         responseMimeType: "application/json",
         responseSchema: {
