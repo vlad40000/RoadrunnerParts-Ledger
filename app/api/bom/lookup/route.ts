@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { MachineSchema } from "@/src/lib/contracts";
 import { lookupBom } from "@/src/sources";
 
+export const dynamic = "force-dynamic";
+
 export async function POST(request: Request) {
   const body = await request.json().catch(() => null);
   const parsed = MachineSchema.safeParse(body?.machine ?? body);
