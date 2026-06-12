@@ -4,12 +4,15 @@ import { useEffect, useMemo, useState } from "react";
 import type { BomRow, Machine } from "@/src/lib/contracts";
 import { MachineSchema } from "@/src/lib/contracts";
 import { BomGrid } from "./bom-grid";
+import { BomSourceCards, type ApplyMode } from "./bom-source-cards";
 import { ImportExportBar } from "./import-export-bar";
 import { MachineIntake } from "./machine-intake";
 import { PullList } from "./pull-list";
 import { RecentMachines } from "./recent-machines";
 import { StatsStrip } from "./stats-strip";
 import { listLedgers, saveLedger, type LedgerState } from "@/src/lib/local-ledger";
+import { dedupeBomRows, mergeBomRows } from "@/src/lib/merge-bom";
+import type { SupplierId } from "@/src/sources/supplier-config";
 
 const EMPTY_MACHINE: Machine = {
   machine_id: "",
@@ -91,6 +94,17 @@ export function LedgerApp() {
     }
   }
 
+  async function applySupplierRows(supplier: SupplierId, incoming: BomRow[], mode: ApplyMode) {
+    const nextRows = mode === "replace"
+      ? dedupeBomRows(incoming)
+      : mergeBomRows(rows, incoming);
+    setRows(nextRows);
+    setPullIds(new Set());
+    setMessage(
+      `${mode === "replace" ? "Replaced" : "Merged"} the active ledger with ${nextRows.length} rows from ${supplier}. Save machine to persist.`
+    );
+  }
+
   return (
     <main className="min-h-screen bg-slate-100 text-slate-900">
       <header className="border-b border-slate-200 bg-white px-6 py-4">
@@ -109,6 +123,7 @@ export function LedgerApp() {
         <div className="space-y-4">
           <MachineIntake machine={machine} onChange={setMachine} onSave={saveCurrent} />
           <ImportExportBar machine={machine} rows={rows} onRowsChange={setRows} onLookup={lookupBom} busy={busy} />
+          <BomSourceCards machine={machine} currentLedger={rows} onApply={applySupplierRows} />
           {message ? <div className="rounded-xl border border-blue-100 bg-blue-50 px-4 py-3 text-sm text-blue-800">{message}</div> : null}
           <StatsStrip rows={rows} />
           <BomGrid machine={machine} rows={rows} pullIds={pullIds} onRowsChange={setRows} onTogglePull={togglePull} />
