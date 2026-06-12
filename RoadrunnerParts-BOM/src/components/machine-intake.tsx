@@ -1,7 +1,7 @@
 "use client";
 
 import type { Machine } from "@/src/lib/contracts";
-import { ImageField } from "@/src/components/image-field";
+import { NameplateScanner, type ScannerResult } from "@/src/components/nameplate-scanner";
 
 type Props = {
   machine: Machine;
@@ -14,13 +14,25 @@ export function MachineIntake({ machine, onChange, onSave }: Props) {
     onChange({ ...machine, [key]: value });
   }
 
+  function handleScanSuccess(result: ScannerResult) {
+    // Keep existing values if the scanner returned empty strings
+    const newSerial = result.serial || machine.serial;
+    onChange({
+      ...machine,
+      brand: result.brand || machine.brand,
+      model: result.model || machine.model,
+      serial: newSerial,
+      machine_id: machine.machine_id || newSerial,
+    });
+  }
+
   return (
     <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
       <div className="mb-3 flex items-center justify-between gap-3">
         <div>
           <h2 className="text-sm font-bold uppercase tracking-wide text-slate-500">Machine intake</h2>
           <p className="text-sm text-slate-500">
-            Enter fields manually, or use the <span className="font-medium text-slate-700">camera / upload</span> icons to extract from a nameplate photo.
+            Enter fields manually, or use the scanner to extract from a nameplate photo.
           </p>
         </div>
         <button
@@ -31,11 +43,25 @@ export function MachineIntake({ machine, onChange, onSave }: Props) {
           Save machine
         </button>
       </div>
+
+      <NameplateScanner onSuccess={handleScanSuccess} />
+
       <div className="grid gap-3 md:grid-cols-4">
         <Field label="machine_id" value={machine.machine_id} onChange={(value) => patch("machine_id", value)} />
-        <ImageField field="brand" label="brand" value={machine.brand} onChange={(value) => patch("brand", value)} required />
-        <ImageField field="model" label="model" value={machine.model} onChange={(value) => patch("model", value)} required />
-        <ImageField field="serial" label="serial" value={machine.serial} onChange={(value) => patch("serial", value)} required />
+        <Field label="brand" value={machine.brand} onChange={(value) => patch("brand", value)} required />
+        <Field label="model" value={machine.model} onChange={(value) => patch("model", value)} required />
+        <Field 
+          label="serial" 
+          value={machine.serial} 
+          onChange={(value) => {
+            onChange({
+              ...machine,
+              serial: value,
+              ...(machine.machine_id ? {} : { machine_id: value })
+            });
+          }} 
+          required 
+        />
       </div>
       <label className="mt-3 block text-xs font-semibold uppercase tracking-wide text-slate-500">
         Machine notes <span className="normal-case text-slate-400">optional; machine-level only</span>

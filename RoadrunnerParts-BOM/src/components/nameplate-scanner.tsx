@@ -3,19 +3,19 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Camera, Loader2, Upload, X } from "lucide-react";
 
-type OcrField = "brand" | "model" | "serial" | "machine_id";
 type OcrStatus = "idle" | "loading" | "error";
 
-type Props = {
-  label: string;
-  value: string;
-  onChange: (value: string) => void;
-  required?: boolean;
-  field: OcrField;
-  placeholder?: string;
+export type ScannerResult = {
+  brand: string;
+  model: string;
+  serial: string;
 };
 
-export function ImageField({ label, value, onChange, required, field, placeholder }: Props) {
+type Props = {
+  onSuccess: (result: ScannerResult) => void;
+};
+
+export function NameplateScanner({ onSuccess }: Props) {
   const [ocrStatus, setOcrStatus] = useState<OcrStatus>("idle");
   const [ocrError, setOcrError] = useState<string | null>(null);
   const [cameraOpen, setCameraOpen] = useState(false);
@@ -41,21 +41,21 @@ export function ImageField({ label, value, onChange, required, field, placeholde
         const res = await fetch("/api/ocr", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ image: dataUrl, field }),
+          body: JSON.stringify({ image: dataUrl }),
         });
         if (!res.ok) {
           const body = (await res.json().catch(() => ({}))) as { error?: string };
           throw new Error(body.error ?? `Request failed (${res.status})`);
         }
-        const data = (await res.json()) as { value: string };
-        onChange(data.value);
+        const data = (await res.json()) as ScannerResult;
+        onSuccess(data);
         setOcrStatus("idle");
       } catch (err) {
         setOcrError(err instanceof Error ? err.message : "OCR failed");
         setOcrStatus("error");
       }
     },
-    [field, onChange]
+    [onSuccess]
   );
 
   // ── Upload ──────────────────────────────────────────────────────────────────
@@ -117,54 +117,50 @@ export function ImageField({ label, value, onChange, required, field, placeholde
   const isLoading = ocrStatus === "loading";
 
   return (
-    <div>
-      {/* Label */}
-      <label className="block text-xs font-semibold uppercase tracking-wide text-slate-500">
-        {label}
-        {required && <span className="ml-0.5 text-blue-600">*</span>}
-      </label>
-
-      {/* Input row */}
-      <div className="relative mt-1">
-        <input
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          placeholder={placeholder ?? "Type or scan…"}
-          className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 pr-14 text-sm text-slate-900 outline-none transition focus:border-blue-400 focus:bg-white"
-        />
-
-        {/* Action buttons — right-inset */}
-        <div className="absolute inset-y-0 right-2 flex items-center gap-1">
+    <div className="mb-4 rounded-xl border-2 border-dashed border-blue-200 bg-blue-50/50 p-4 transition-colors hover:bg-blue-50">
+      <div className="flex flex-col items-center justify-center gap-3 text-center sm:flex-row sm:text-left">
+        <div className="flex-1">
+          <h3 className="text-sm font-bold text-blue-900">Scan Nameplate</h3>
+          <p className="mt-0.5 text-xs text-blue-700/80">
+            Automatically extract Brand, Model, and Serial Number from a photo.
+          </p>
+        </div>
+        
+        <div className="flex items-center gap-2">
           {isLoading ? (
-            <Loader2 size={15} className="animate-spin text-blue-500" />
+            <div className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-blue-600">
+              <Loader2 size={16} className="animate-spin" />
+              Scanning...
+            </div>
           ) : (
             <>
               {hasCamera && (
                 <button
                   type="button"
                   onClick={openCamera}
-                  title={`Capture ${label} with camera`}
-                  className="rounded p-1 text-slate-400 transition hover:bg-blue-50 hover:text-blue-600"
+                  className="flex items-center gap-2 rounded-lg bg-white px-4 py-2 text-sm font-semibold text-blue-700 shadow-sm ring-1 ring-inset ring-blue-200 transition hover:bg-blue-50 active:scale-95"
                 >
-                  <Camera size={14} />
+                  <Camera size={16} />
+                  Camera
                 </button>
               )}
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
-                title={`Upload image for ${label}`}
-                className="rounded p-1 text-slate-400 transition hover:bg-blue-50 hover:text-blue-600"
+                className="flex items-center gap-2 rounded-lg bg-white px-4 py-2 text-sm font-semibold text-blue-700 shadow-sm ring-1 ring-inset ring-blue-200 transition hover:bg-blue-50 active:scale-95"
               >
-                <Upload size={14} />
+                <Upload size={16} />
+                Upload
               </button>
             </>
           )}
         </div>
       </div>
 
-      {/* Inline error */}
       {ocrStatus === "error" && ocrError && (
-        <p className="mt-1 text-xs text-red-500">{ocrError}</p>
+        <p className="mt-3 rounded-lg bg-red-50 p-2 text-center text-xs font-medium text-red-600">
+          {ocrError}
+        </p>
       )}
 
       {/* Hidden file input */}
@@ -187,9 +183,7 @@ export function ImageField({ label, value, onChange, required, field, placeholde
             {/* Header */}
             <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3">
               <p className="text-sm font-semibold text-slate-700">
-                Point at the{" "}
-                <span className="font-bold text-blue-600">{label}</span> on the
-                nameplate
+                Point at the <span className="font-bold text-blue-600">nameplate</span>
               </p>
               <button
                 type="button"
