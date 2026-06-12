@@ -8,3 +8,6 @@ dist
 .agents/state/
 *.log
 .DS_Store
+
+.vercel
+.env*.local
