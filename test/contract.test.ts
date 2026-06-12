@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { readFileSync } from "node:fs";
 import { BOM_COLUMNS, BomRowSchema, MachineSchema, normalizeBomRow } from "../src/lib/contracts";
 import { parseBomCsv, serializeBomCsv } from "../src/lib/csv";
 import { buildEbayActiveUrl, buildEbaySoldUrl } from "../src/sources/ebay";
@@ -55,5 +56,33 @@ describe("Roadrunner Parts Ledger contract", () => {
 
   it("normalizes model punctuation for supplier URLs", () => {
     expect(normalizeModel("WA45H7000AW/A2")).toBe("WA45H7000AWA2");
+  });
+
+  it("parses structured Encompass parts when the rendered table is absent", () => {
+    const payload = `1:${JSON.stringify({
+      parts: [{
+        partNumber: "WE03X23881",
+        partDescription: "Drive Belt",
+        location: "310",
+        reportPartPrice: "24.95",
+        allowPurchase: "Y"
+      }]
+    })}`;
+    const html = `<script>self.__next_f.push(${JSON.stringify([1, payload])})</script>`;
+
+    expect(parseEncompassRows(html)).toEqual([{
+      part_number: "WE03X23881",
+      diagram_id: "310",
+      description: "Drive Belt",
+      encompass_price: "$24.95"
+    }]);
+  });
+
+  it("parses the tracked Encompass response fixture", () => {
+    const html = readFileSync(new URL("../encompass-test.html", import.meta.url), "utf8");
+    const rows = parseEncompassRows(html);
+
+    expect(rows.length).toBeGreaterThan(10);
+    expect(rows.some((row) => row.part_number === "WPW10562155")).toBe(true);
   });
 });

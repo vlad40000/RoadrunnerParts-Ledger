@@ -93,6 +93,10 @@ export async function lookupEncompassBom(machine: Machine): Promise<LookupResult
     if (!firstHtml) continue;
 
     const rows = parseEncompassRows(firstHtml);
+    if (!rows.length) {
+      warnings.push(`Encompass returned no parseable parts for ${machine.model} using ${abv.toUpperCase()}.`);
+      continue;
+    }
     const pages = totalPages(firstHtml);
 
     for (let page = 2; page <= pages; page += 1) {
