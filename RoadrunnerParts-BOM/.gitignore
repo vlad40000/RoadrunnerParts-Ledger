@@ -1,0 +1,10 @@
+node_modules
+.next
+out
+dist
+.env
+.env.local
+.vercel
+.agents/state/
+*.log
+.DS_Store
