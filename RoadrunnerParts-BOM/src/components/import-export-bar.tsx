@@ -69,7 +69,7 @@ export function ImportExportBar({ machine, rows, onRowsChange, onLookup, busy }:
           Export XLSX
         </button>
       </div>
-      <p className="mt-3 text-sm text-slate-500">CSV/XLSX imports ignore unsupported columns and keep only part_number, diagram_id, description, encompass_price.</p>
+      <p className="mt-3 text-sm text-slate-500">CSV/XLSX imports ignore unsupported columns and keep only part_number, diagram_id, description, PRICE.</p>
     </section>
   );
 }

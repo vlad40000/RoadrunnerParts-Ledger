@@ -29,7 +29,7 @@ export function BomGrid({ machine, rows, pullIds, onRowsChange, onTogglePull }: 
       <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3">
         <div>
           <h2 className="text-sm font-bold uppercase tracking-wide text-slate-500">BOM spreadsheet</h2>
-          <p className="text-sm text-slate-500">Data columns are locked to part_number, diagram_id, description, encompass_price.</p>
+          <p className="text-sm text-slate-500">Data columns are locked to part_number, diagram_id, description, PRICE.</p>
         </div>
         <button type="button" onClick={addRow} className="rounded-lg border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50">
           Add row
@@ -42,7 +42,7 @@ export function BomGrid({ machine, rows, pullIds, onRowsChange, onTogglePull }: 
               <th className="w-40 px-3 py-3 text-left">part_number</th>
               <th className="w-28 px-3 py-3 text-left">diagram_id</th>
               <th className="px-3 py-3 text-left">description</th>
-              <th className="w-36 px-3 py-3 text-left">encompass_price</th>
+              <th className="w-36 px-3 py-3 text-left">PRICE</th>
               <th className="w-72 px-3 py-3 text-right">Actions</th>
             </tr>
           </thead>
