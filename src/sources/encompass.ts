@@ -3,7 +3,6 @@ import { load } from "cheerio";
 import type { Machine } from "@/src/lib/contracts";
 import type { LookupResult, PriceLookup } from "./types";
 import { normalizeBrand, normalizeModel } from "./normalize";
-import { gotScraping } from "got-scraping";
 import { parseEncompassRows } from "./encompass-parser";
 
 const BRAND_TO_ABV: Record<string, string> = {
@@ -51,6 +50,7 @@ function modelUrl(abv: string, model: string, page?: number): string {
 
 async function fetchHtml(url: string): Promise<string | null> {
   try {
+    const { gotScraping } = await import("got-scraping");
     const response = await gotScraping({
       url,
       headerGeneratorOptions: {
