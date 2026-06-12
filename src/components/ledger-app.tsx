@@ -82,7 +82,13 @@ export function LedgerApp() {
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ machine: parsed.data })
       });
-      const data = await response.json() as { rows?: BomRow[]; warnings?: string[]; error?: string };
+      const contentType = response.headers.get("content-type") ?? "";
+      const data = contentType.includes("application/json")
+        ? await response.json() as { rows?: BomRow[]; warnings?: string[]; error?: string }
+        : null;
+      if (!data) {
+        throw new Error(`Lookup service returned HTTP ${response.status} instead of JSON.`);
+      }
       if (!response.ok) throw new Error(data.error ?? "Lookup failed.");
       setRows(data.rows ?? []);
       setPullIds(new Set());

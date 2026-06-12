@@ -1,5 +1,5 @@
 export function normalizeModel(model: string): string {
-  return model.replace(/[\s.\-]/g, "").trim().toUpperCase();
+  return model.replace(/[^a-z0-9]/gi, "").trim().toUpperCase();
 }
 
 export function normalizeBrand(brand: string): string {

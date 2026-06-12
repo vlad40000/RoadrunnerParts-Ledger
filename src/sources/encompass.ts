@@ -1,10 +1,10 @@
 import "server-only";
 import { load } from "cheerio";
-import type { BomRow, Machine } from "@/src/lib/contracts";
-import { normalizeBomRow } from "@/src/lib/contracts";
+import type { Machine } from "@/src/lib/contracts";
 import type { LookupResult, PriceLookup } from "./types";
-import { normalizeBrand, normalizeModel, normalizePriceText } from "./normalize";
+import { normalizeBrand, normalizeModel } from "./normalize";
 import { gotScraping } from "got-scraping";
+import { parseEncompassRows } from "./encompass-parser";
 
 const BRAND_TO_ABV: Record<string, string> = {
   ge: "hot",
@@ -66,49 +66,6 @@ async function fetchHtml(url: string): Promise<string | null> {
   }
 }
 
-function parseRows(html: string): BomRow[] {
-  const $ = load(html);
-  const rows: BomRow[] = [];
-
-  $("tr").each((_, tr) => {
-    const cells = $(tr).find("td,th").toArray();
-    if (cells.length < 5) return;
-
-    const headerText = cells.slice(0, 3).map((cell) => $(cell).text().trim()).join(" ");
-    if (/Part Number|Part Title/i.test(headerText)) return;
-
-    const partNumber = $(cells[1]).text().trim();
-    if (!partNumber || partNumber.length < 3) return;
-
-    const titleLines = $(cells[2]).text().split(/\n|(?=Schematic Location:)/).map((line) => line.trim()).filter(Boolean);
-    let diagramId = "";
-    const description: string[] = [];
-
-    for (const line of titleLines) {
-      const schematic = line.match(/Schematic Location:\s*(\S+)/i);
-      if (schematic) {
-        diagramId = schematic[1] ?? "";
-        continue;
-      }
-      if (/^Skill Level/i.test(line)) continue;
-      description.push(line);
-    }
-
-    const priceText = normalizePriceText($(cells[4]).text().trim());
-    const availability = cells[5] ? $(cells[5]).text().trim() : "";
-    const price = priceText || (/no longer available|discontinued|nla/i.test(availability) ? "NLA" : "");
-
-    rows.push(normalizeBomRow({
-      part_number: partNumber,
-      diagram_id: diagramId,
-      description: description.join(" "),
-      encompass_price: price
-    }));
-  });
-
-  return rows;
-}
-
 function totalPages(html: string): number {
   const $ = load(html);
   const nums: number[] = [];
@@ -135,7 +92,7 @@ export async function lookupEncompassBom(machine: Machine): Promise<LookupResult
     const firstHtml = await fetchHtml(firstUrl);
     if (!firstHtml) continue;
 
-    const rows = parseRows(firstHtml);
+    const rows = parseEncompassRows(firstHtml);
     const pages = totalPages(firstHtml);
 
     for (let page = 2; page <= pages; page += 1) {
@@ -144,7 +101,7 @@ export async function lookupEncompassBom(machine: Machine): Promise<LookupResult
         warnings.push(`Encompass page ${page} did not load; pagination stopped.`);
         break;
       }
-      rows.push(...parseRows(html));
+      rows.push(...parseEncompassRows(html));
     }
 
     return { rows, source: "encompass", sourceUrl: firstUrl, warnings };

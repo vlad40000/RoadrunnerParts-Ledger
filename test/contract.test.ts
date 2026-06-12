@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import { BOM_COLUMNS, BomRowSchema, MachineSchema, normalizeBomRow } from "../src/lib/contracts";
 import { parseBomCsv, serializeBomCsv } from "../src/lib/csv";
 import { buildEbayActiveUrl, buildEbaySoldUrl } from "../src/sources/ebay";
+import { parseEncompassRows } from "../src/sources/encompass-parser";
+import { normalizeModel } from "../src/sources/normalize";
 
 describe("Roadrunner Parts Ledger contract", () => {
   it("requires manual machine_id", () => {
@@ -35,5 +37,23 @@ describe("Roadrunner Parts Ledger contract", () => {
     expect(buildEbayActiveUrl(row, machine)).toContain("ebay.com");
     expect(buildEbaySoldUrl(row, machine)).toContain("LH_Sold=1");
     expect(Object.keys(row)).toEqual(["part_number", "diagram_id", "description", "encompass_price"]);
+  });
+
+  it("parses Encompass tables by header name instead of fixed cell position", () => {
+    const html = `
+      <table>
+        <tr><th></th><th>Image</th><th>Part Number</th><th>Part Title</th><th>Quantity</th><th>Price</th><th>Availability</th></tr>
+        <tr><td></td><td></td><td>WPW10562155</td><td>Control Knob Schematic Location: 12</td><td>-+</td><td>51.95</td><td>In stock</td></tr>
+        <tr><td></td><td></td><td>W11224630</td><td>Door Catch Schematic Location: 22</td><td></td><td></td><td>No Longer Available</td></tr>
+      </table>`;
+
+    expect(parseEncompassRows(html)).toEqual([
+      { part_number: "WPW10562155", diagram_id: "12", description: "Control Knob", encompass_price: "$51.95" },
+      { part_number: "W11224630", diagram_id: "22", description: "Door Catch", encompass_price: "NLA" }
+    ]);
+  });
+
+  it("normalizes model punctuation for supplier URLs", () => {
+    expect(normalizeModel("WA45H7000AW/A2")).toBe("WA45H7000AWA2");
   });
 });
