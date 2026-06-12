@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import { GoogleGenAI, Type } from "@google/genai";
 import { z } from "zod";
 
 export const runtime = "nodejs";
@@ -55,15 +55,46 @@ export async function POST(request: Request) {
   const base64Data = match[2];
 
   try {
-    const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+    const ai = new GoogleGenAI({ apiKey });
 
-    const result = await model.generateContent([
-      FIELD_PROMPTS[field],
-      { inlineData: { mimeType, data: base64Data } },
-    ]);
+    const result = await ai.models.generateContent({
+      model: "gemini-3.1-flash-lite",
+      contents: [
+        {
+          role: "user",
+          parts: [
+            { text: FIELD_PROMPTS[field] },
+            { inlineData: { mimeType, data: base64Data } },
+          ],
+        },
+      ],
+      config: {
+        thinkingConfig: { thinkingBudget: 0 }, // MINIMAL — suppress chain-of-thought for speed
+        tools: [{ googleSearch: {} }],
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: Type.OBJECT,
+          properties: {
+            value: {
+              type: Type.STRING,
+              description: "The extracted field value from the nameplate image.",
+            },
+          },
+          required: ["value"],
+        },
+      },
+    });
 
-    const value = result.response.text().trim();
+    const raw = result.text ?? "";
+    let value = "";
+    try {
+      const data = JSON.parse(raw) as { value?: string };
+      value = data.value?.trim() ?? raw.trim();
+    } catch {
+      // Fallback: model returned plain text instead of JSON
+      value = raw.trim();
+    }
+
     return NextResponse.json({ value });
   } catch (err) {
     console.error("[api/ocr] Gemini error:", err);
